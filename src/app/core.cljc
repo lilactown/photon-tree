@@ -5,34 +5,38 @@
   (:import (hyperfiddle.photon Pending))
   #?(:cljs (:require-macros app.core)))                     ; forces shadow hot reload to also reload JVM at the same time
 
+(def tree '{:deps     true
+            :builds   {:app {:target     :browser
+                             :asset-path "/js"
+                             :output-dir "resources/public/js"
+                             :modules    {:main {:init-fn user/start!
+                                                 :entries [user]}}
+                             :devtools   {:watch-dir       "resources/public"
+                                          :hud             #{:errors :progress}
+                                          :ignore-warnings true}}}
+            :dev-http {8080 "resources/public"}
+            :nrepl    {:port 9001}
+            :npm-deps {:install false}})
+
+
+(p/defn MapEntryView [k v]
+  (dom/ul
+   (dom/li (dom/text (str k)))
+   (dom/li (dom/text (str v)))))
+
+
+(p/defn MapView [data]
+  (dom/ul
+   (dom/for [[k v] data]
+     (dom/li (MapEntryView. k v)))))
+
 (p/defn App []
   (dom/div
-    (dom/h1 (dom/text "Healthcheck"))
-
-    (dom/p (dom/span (dom/text "millisecond time: "))
-           (dom/span (dom/text dom/time)))
-
-    (let [x (dom/button
-              (dom/text "click me")
-              (dom/attribute "type" "button")
-              (new (->> (dom/events dom/parent "click")
-                        (m/eduction (map (constantly 1)))
-                        (m/reductions +))))]
-
-      (dom/div
-        (dom/table
-          (dom/thead
-            (dom/td (dom/style {"width" "5em"}) (dom/text "count"))
-            (dom/td (dom/style {"width" "10em"}) (dom/text "type")))
-          (dom/tbody
-            (dom/tr
-              (dom/td (dom/text (str x)))
-              (dom/td (dom/text (if (odd? x)
-                                  ~@(pr-str (type x))       ; ~@ marks client/server transfer
-                                  (pr-str (type x))))))))))))
+   (dom/h1 (dom/text "Tree view"))
+   (MapView. {:foo "bar"})))
 
 (def app #?(:cljs (p/client (p/main
-                               (binding [dom/parent (dom/by-id "root")]
-                                 (try
-                                   (App.)
-                                   (catch Pending _)))))))
+                             (binding [dom/parent (dom/by-id "root")]
+                               (try
+                                 (App.)
+                                 (catch Pending _)))))))
