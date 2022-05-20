@@ -19,21 +19,38 @@
             :npm-deps {:install false}})
 
 
-(p/defn MapEntryView [k v]
+(declare View)
+
+
+(p/defn MapEntryView
+  [k v]
   (dom/ul
-   (dom/li (dom/text (str k)))
-   (dom/li (dom/text (str v)))))
+   (dom/li (View. k))
+   (dom/li (View. v))))
 
 
-(p/defn MapView [data]
+(p/defn MapView
+  [data]
   (dom/ul
    (dom/for [[k v] data]
      (dom/li (MapEntryView. k v)))))
 
-(p/defn App []
+
+(p/defn View
+  [data]
+  (cond
+    (map? data) (MapView. data)
+    ;(map-entry? data) (MapEntryView. (key data) (val data))
+
+    :else (dom/text (str data))))
+
+
+(p/defn App
+  []
   (dom/div
    (dom/h1 (dom/text "Tree view"))
-   (MapView. {:foo "bar"})))
+   (View. {:foo {:bar #{"baz"}}})))
+
 
 (def app #?(:cljs (p/client (p/main
                              (binding [dom/parent (dom/by-id "root")]
