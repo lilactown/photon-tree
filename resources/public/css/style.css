@@ -9,7 +9,11 @@
     gap: 0 8px;
 }
 
-.view > [role="treeitem"][aria-expanded="true"] > ul {
+.view:hover {
+    background: rgba(200,200,200,0.2);
+}
+
+.view[aria-expanded="true"] {
     flex-direction: column;
 }
 

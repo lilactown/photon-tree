@@ -24,6 +24,12 @@
 (p/def MapEntryView)
 (p/def MapView)
 
+;; for some reason i can't use anonymous fns/closures inside p/fn
+(defn create-toggle
+  [a]
+  (fn [_]
+    (prn :toggle)
+    (swap! a not)))
 
 (p/defn App
   []
@@ -33,42 +39,56 @@
                    (cond
                      (map? data) (MapView. data)
                      (coll? data) (CollView. data)
-                     :else (dom/text (str data))))
+                     :else (dom/text (pr-str data))))
             CollView (p/fn [data]
                        (let [[begin end] (cond
                                            (vector? data) "[]"
                                            (set? data) ["#{" "}"]
-                                           :else "()")]
-                         (dom/ul
-                          (dom/attribute "class" "view coll-view")
-                          (dom/text begin)
-                          (dom/for [x data]
-                            (dom/li
-                             (dom/attribute "role" "treeitem")
-                             (View. x))))
-                         (dom/text end)))
-            MapEntryView (p/fn [k v]
-                           (dom/ul
-                            (dom/attribute "class" "view map-entry-view")
-                            (dom/li
-                             (dom/attribute "role" "treeitem")
-                             (View. k))
-                            (dom/li
-                             (dom/attribute "role" "treeitem")
-                             (View. v))))
-            MapView (p/fn [data]
-                      (dom/ul
-                       (dom/attribute "class" "view map-view")
-                       (dom/attribute "role" "group")
-                       (dom/text "{")
-                       (dom/for [e data]
+                                           :else "()")
+                             *expanded? (atom true)
+                             toggle (create-toggle *expanded?)]
                          (dom/li
                           (dom/attribute "role" "treeitem")
-                          (MapEntryView. (key e) (val e))))
-                       (dom/text "}")))]
+                          (new (->> (dom/events (doto dom/parent prn) "click")
+                                    (m/eduction (map toggle))
+
+                                    (p/continuous)))
+                          (dom/ul
+                           (dom/attribute "class" "view coll-view")
+                           (dom/attribute "role" "group")
+                           (if (p/watch *expanded?)
+                             (dom/attribute "aria-expanded" "true")
+                             (dom/attribute "aria-expanded" "false"))
+                           (dom/text begin)
+                           (dom/for [x data]
+                             (dom/li
+                              (dom/attribute "role" "treeitem")
+                              (View. x)))
+                           (dom/text end)))))
+            MapEntryView (p/fn [k v]
+                           (dom/li
+                            (dom/attribute "role" "treeitem")
+                            (dom/ul
+                             (dom/attribute "class" "view map-entry-view")
+                             (dom/attribute "role" "group")
+                             (View. k)
+                             (View. v))))
+            MapView (p/fn [data]
+                      (dom/li
+                       (dom/attribute "role" "treeitem")
+                       (dom/ul
+                        (dom/attribute "class" "view map-view")
+                        (dom/attribute "role" "group")
+                        (dom/text "{")
+                        (dom/for [e data]
+                          (MapEntryView. (key e) (val e)))
+                        (dom/text "}"))))]
     (dom/div
      (dom/h1 (dom/text "Tree view"))
-     (View. {:foo {:bar #{"baz"}}}))))
+     (dom/ul
+      (dom/attribute "class" "view")
+      (dom/attribute "role" "tree")
+      (View. {:foo {:bar #{"baz" "jkl"}}})))))
 
 
 (def app #?(:cljs (p/client (p/main
