@@ -19,37 +19,56 @@
             :npm-deps {:install false}})
 
 
-(declare View)
-
-
-(p/defn MapEntryView
-  [k v]
-  (dom/ul
-   (dom/li (View. k))
-   (dom/li (View. v))))
-
-
-(p/defn MapView
-  [data]
-  (dom/ul
-   (dom/for [[k v] data]
-     (dom/li (MapEntryView. k v)))))
-
-
-(p/defn View
-  [data]
-  (cond
-    (map? data) (MapView. data)
-    ;(map-entry? data) (MapEntryView. (key data) (val data))
-
-    :else (dom/text (str data))))
+(p/def View)
+(p/def CollView)
+(p/def MapEntryView)
+(p/def MapView)
 
 
 (p/defn App
   []
-  (dom/div
-   (dom/h1 (dom/text "Tree view"))
-   (View. {:foo {:bar #{"baz"}}})))
+  ;; use dynamic bindings because the compiler doesn't support mutual recursion
+  ;; in `p/defn` yet
+  (binding [View (p/fn [data]
+                   (cond
+                     (map? data) (MapView. data)
+                     (coll? data) (CollView. data)
+                     :else (dom/text (str data))))
+            CollView (p/fn [data]
+                       (let [[begin end] (cond
+                                           (vector? data) "[]"
+                                           (set? data) ["#{" "}"]
+                                           :else "()")]
+                         (dom/ul
+                          (dom/attribute "class" "view coll-view")
+                          (dom/text begin)
+                          (dom/for [x data]
+                            (dom/li
+                             (dom/attribute "role" "treeitem")
+                             (View. x))))
+                         (dom/text end)))
+            MapEntryView (p/fn [k v]
+                           (dom/ul
+                            (dom/attribute "class" "view map-entry-view")
+                            (dom/li
+                             (dom/attribute "role" "treeitem")
+                             (View. k))
+                            (dom/li
+                             (dom/attribute "role" "treeitem")
+                             (View. v))))
+            MapView (p/fn [data]
+                      (dom/ul
+                       (dom/attribute "class" "view map-view")
+                       (dom/attribute "role" "group")
+                       (dom/text "{")
+                       (dom/for [e data]
+                         (dom/li
+                          (dom/attribute "role" "treeitem")
+                          (MapEntryView. (key e) (val e))))
+                       (dom/text "}")))]
+    (dom/div
+     (dom/h1 (dom/text "Tree view"))
+     (View. {:foo {:bar #{"baz"}}}))))
 
 
 (def app #?(:cljs (p/client (p/main

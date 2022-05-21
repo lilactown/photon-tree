@@ -1,0 +1,16 @@
+.view {
+    font-family: monospace;
+    font-size: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    position: relative;
+    display: inline-flex;
+    gap: 0 8px;
+}
+
+.view > [role="treeitem"][aria-expanded="true"] > ul {
+    flex-direction: column;
+}
+
+
