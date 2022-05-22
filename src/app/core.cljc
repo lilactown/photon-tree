@@ -27,8 +27,9 @@
 ;; for some reason i can't use anonymous fns/closures inside p/fn
 (defn create-toggle
   [a]
-  (fn [_]
+  (fn [e]
     (prn :toggle)
+    (.stopPropagation e)
     (swap! a not)))
 
 (p/defn App
@@ -45,11 +46,11 @@
                                            (vector? data) "[]"
                                            (set? data) ["#{" "}"]
                                            :else "()")
-                             *expanded? (atom true)
+                             *expanded? (atom false)
                              toggle (create-toggle *expanded?)]
                          (dom/li
                           (dom/attribute "role" "treeitem")
-                          (new (->> (dom/events (doto dom/parent prn) "click")
+                          (new (->> (dom/events dom/parent "click")
                                     (m/eduction (map toggle))
 
                                     (p/continuous)))
@@ -74,21 +75,29 @@
                              (View. k)
                              (View. v))))
             MapView (p/fn [data]
-                      (dom/li
-                       (dom/attribute "role" "treeitem")
-                       (dom/ul
-                        (dom/attribute "class" "view map-view")
-                        (dom/attribute "role" "group")
-                        (dom/text "{")
-                        (dom/for [e data]
-                          (MapEntryView. (key e) (val e)))
-                        (dom/text "}"))))]
+                      (let [*expanded? (atom false)
+                            toggle (create-toggle *expanded?)]
+                        (dom/li
+                         (dom/attribute "role" "treeitem")
+                         (new (->> (dom/events dom/parent "click")
+                                   (m/eduction (map toggle))
+                                   (p/continuous)))
+                         (dom/ul
+                          (dom/attribute "class" "view map-view")
+                          (dom/attribute "role" "group")
+                          (if (p/watch *expanded?)
+                            (dom/attribute "aria-expanded" "true")
+                            (dom/attribute "aria-expanded" "false"))
+                          (dom/text "{")
+                          (dom/for [e data]
+                            (MapEntryView. (key e) (val e)))
+                          (dom/text "}")))))]
     (dom/div
      (dom/h1 (dom/text "Tree view"))
      (dom/ul
       (dom/attribute "class" "view")
       (dom/attribute "role" "tree")
-      (View. {:foo {:bar #{"baz" "jkl"}}})))))
+      (View. tree)))))
 
 
 (def app #?(:cljs (p/client (p/main
